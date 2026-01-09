@@ -95,7 +95,7 @@ jobs:
         working-directory: android
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
-        run: ./gradlew assembleRelease --no-daemon --max-workers=2 -x lint -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2 -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
 
       - name: Upload Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
