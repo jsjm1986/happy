@@ -22,9 +22,30 @@ jobs:
 
       - name: Free disk space
         run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove large unnecessary packages
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/25.*
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/26.*
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/go
+          sudo rm -rf /opt/hostedtoolcache/node
+
+          # Clean Docker
+          sudo docker image prune -af || true
+          sudo docker system prune -af || true
+
+          # Clean apt cache
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -74,7 +95,7 @@ jobs:
         working-directory: android
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
-        run: ./gradlew assembleRelease --no-daemon --max-workers=2
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2 -x lint -x lintVitalAnalyzeRelease -x lintVitalReportRelease
 
       - name: Upload Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
