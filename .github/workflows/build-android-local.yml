@@ -20,6 +20,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,11 +41,23 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install NDK
+        run: |
+          sdkmanager --install "ndk;27.1.12297006"
+          sdkmanager --install "cmake;3.22.1"
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
       - name: Generate native code
         run: npx expo prebuild --platform android --clean
+
+      - name: Configure Gradle
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" >> ~/.gradle/gradle.properties
+          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -47,12 +65,16 @@ jobs:
       - name: Build APK (Debug)
         if: ${{ github.event.inputs.build_type == 'debug' }}
         working-directory: android
-        run: ./gradlew assembleDebug
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
+        run: ./gradlew assembleDebug --no-daemon --max-workers=2
 
       - name: Build APK (Release)
         if: ${{ github.event.inputs.build_type == 'release' }}
         working-directory: android
-        run: ./gradlew assembleRelease
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.1.12297006
+        run: ./gradlew assembleRelease --no-daemon --max-workers=2
 
       - name: Upload Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
